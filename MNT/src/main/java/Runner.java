@@ -43,7 +43,7 @@ public class Runner
     /**
      * Get random time within the last 24 hours
      */
-    public static Date getSeedTime()
+    public static Date getSeedTime() throws Exception
     {
         //get current timestamp;
 
@@ -56,6 +56,10 @@ public class Runner
         //2016-06-11T14:43:35
 
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        String dateString = "2016-06-14T16:00:00";
+        Date date = df.parse(dateString);
+        calendar.setTime(date);
+
         System.out.println(df.format(calendar.getTime()));
         return calendar.getTime();
     }

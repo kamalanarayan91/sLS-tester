@@ -26,7 +26,7 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     public static final String SUBSCRIBEQUEUE = "Q2";
 
     public static final String INDEXENDPOINT = "/data/latency";
-    public static String DATASTOREENDPOINT = "http://localhost:9200/data/latency";
+    public static String DATASTOREENDPOINT = "http://localhost:9200/data100/latency";
 
     //public static final String QUERY= "/perfsonar/_search?q=uri:";
     public static final String QUERY= "/perfsonar/records/_search";

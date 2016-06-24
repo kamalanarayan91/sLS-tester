@@ -83,6 +83,7 @@ public class KeyValueGenerator extends RMQEndPoint implements Runnable {
             {
                 // send as many messages to RabbitMQ server.
                 KVGMessage message = new KVGMessage();
+
                 HashMap<String,String> map = dataList.get(currentRecordIndex);
 
                 //set Message parameters

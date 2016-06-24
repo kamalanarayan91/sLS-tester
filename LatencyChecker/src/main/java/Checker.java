@@ -91,20 +91,6 @@ public class Checker implements Runnable
         boolean waitFlag = true;
         boolean errorStatus= false;
 
-        //Send the query
-        String postUrl = LatencyChecker.SLSCACHEENDPOINT ;
-        CloseableHttpClient httpClient = HttpClientBuilder.create().build();
-        HttpPost post = new HttpPost(postUrl);
-        post.setHeader("Content-type", "application/json");
-        try
-        {
-            StringEntity stringEntity = new StringEntity(queryObject.toString());
-            post.setEntity(stringEntity);
-        }
-        catch(UnsupportedEncodingException e)
-        {
-            e.printStackTrace();
-        }
 
 
 
@@ -112,6 +98,21 @@ public class Checker implements Runnable
 
         while (true)
         {
+
+            //Send the query
+            String postUrl = LatencyChecker.SLSCACHEENDPOINT ;
+            CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+            HttpPost post = new HttpPost(postUrl);
+            post.setHeader("Content-type", "application/json");
+            try
+            {
+                StringEntity stringEntity = new StringEntity(queryObject.toString());
+                post.setEntity(stringEntity);
+            }
+            catch(UnsupportedEncodingException e)
+            {
+                e.printStackTrace();
+            }
 
             try
             {
@@ -192,14 +193,6 @@ public class Checker implements Runnable
                                                 + " uri: " + message.getUri());
                     errorStatus = true;
 
-                    try
-                    {
-                        Thread.sleep(60000);
-                    }
-                    catch (Exception e)
-                    {
-
-                    }
                 }
             }
             catch(Exception e)
@@ -208,12 +201,21 @@ public class Checker implements Runnable
             }
             finally
             {
+
+
                 try
                 {
+                    //clean up
                     response.close();
+                    httpClient.close();
+
                 }
                 catch(Exception e)
-                {}
+                {
+
+                }
+
+
 
             }
 
@@ -236,9 +238,7 @@ public class Checker implements Runnable
                         saveData(null, null, message.getMessageType());
                     }
 
-                    //clean up
-                    post.releaseConnection();
-                    httpClient.close();
+
                     return;// exit this thread. we are done.
                 }
             }
@@ -246,10 +246,7 @@ public class Checker implements Runnable
             {
                 e.printStackTrace();
             }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+
         }
     }
 

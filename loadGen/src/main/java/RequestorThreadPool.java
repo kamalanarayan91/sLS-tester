@@ -8,14 +8,13 @@ import java.util.concurrent.*;
  */
 public class RequestorThreadPool
 {
-    private static final int NUMTHREADS = 100;
-
+    private static final int NUMTHREADS = 2000;
     private ExecutorService threadPool;
 
     public RequestorThreadPool()
     {
-
         threadPool =  Executors.newFixedThreadPool(NUMTHREADS);
+
     }
 
     public void sendRequest(KVGMessage message)
@@ -23,9 +22,5 @@ public class RequestorThreadPool
         Requestor request = new Requestor(message);
         threadPool.execute(request);
     }
-
-
-
-
 
 }
