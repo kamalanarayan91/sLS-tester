@@ -39,9 +39,11 @@ public class Checker implements Runnable
     private LGMessage message;
     private static final long DROP = -1;
 
-    public static final int REGISTERLOOPTIME = 30000;//3 seconds
+    public static final int REGISTERLOOPTIME = 30000;//30 seconds
     private int executionCount;
-    private static final int EXECUTIONLIMIT = 5;
+    private static final int EXECUTIONLIMIT = 16;
+    public static final String REGISTEREDINCACHE = "registered";
+    public static final String RENEWEDINCACHE = "renewed";
 
 
     public Checker(LGMessage message)
@@ -55,7 +57,14 @@ public class Checker implements Runnable
     public void run()
     {
 
+        try
+        {
+            Thread.sleep(10*1000);
+        }
+        catch(Exception e)
+        {
 
+        }
         String uri = message.getUri();
         long firstExecutionTime = System.currentTimeMillis();
 
@@ -133,59 +142,87 @@ public class Checker implements Runnable
                         JSONArray hits = (JSONArray) hitsMap.get("hits");
                         if (hits.size() != 0)
                         {
-                            JSONObject hits2 = (JSONObject) hits.get(0);
-                            JSONObject sourceHashMap = (JSONObject) hits2.get("_source");
-
-                            String recvURI = (String) sourceHashMap.get("uri");
-                            Date creationTime = (Date) JSONObject.toBean((JSONObject) sourceHashMap.get("createdInCache")
-                                    , Date.class);
-
-                            TimeZone tz = TimeZone.getTimeZone("UTC");
-                            DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                            dateFormat.setTimeZone(tz);
-                            Date recvExpiryDate = dateFormat.parse((String) sourceHashMap.get("expires"));
-                            Object expiryString = sourceHashMap.get("expires");
-
-                            if (recvURI.equals(uri))
+                            int index = 0;
+                            while(index<hits.size())
                             {
+                                JSONObject hits2 = (JSONObject) hits.get(index);
+                                index++;
+
+
+                                JSONObject sourceHashMap = (JSONObject) hits2.get("_source");
+
+                                String recvURI = (String) sourceHashMap.get("uri");
+                                Date creationTime = (Date) JSONObject.toBean((JSONObject) sourceHashMap.get("createdInCache")
+                                        , Date.class);
+
+                                TimeZone tz = TimeZone.getTimeZone("UTC");
+                                DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                                dateFormat.setTimeZone(tz);
+                                Date recvExpiryDate = dateFormat.parse((String) sourceHashMap.get("expires"));
+                                Object expiryString = sourceHashMap.get("expires");
+                                String state = (String) sourceHashMap.get("state");
 
                                 if (message.getMessageType().equals(LGMessage.REGISTER))
                                 {
+                                    if(state.equals(REGISTEREDINCACHE) == false)
+                                    {
+                                        continue;
+                                    }
                                     saveData(expiryString, creationTime, LGMessage.REGISTER);
+
                                     if (message.getIsStored() == true)
                                     {
                                         LatencyChecker.storeInfo(recvURI, (String) sourceHashMap.get("expires"));
                                     }
+
                                     System.out.println("message:" + message.getMessageId() + " Finished" + "--"
-                                       + message.getMessageType() + " uri:" + message.getUri() + " errors?:"+ errorStatus);
+                                            + message.getMessageType() + " uri:" + message.getUri()
+                                            + " errors?:" + errorStatus);
 
                                     waitFlag = false;
+                                    break;
 
                                 }
                                 else if (message.getMessageType().equals(LGMessage.RENEW))
                                 {
+                                    if(state.equals(RENEWEDINCACHE) == false)
+                                    {
+                                        continue;
+                                    }
 
                                     Date storedExpiryDate = LatencyChecker.uriExpiryMap.get(message.getUri());
                                     if (storedExpiryDate != null)
                                     {
-                                        if (storedExpiryDate.compareTo(recvExpiryDate) > 0)
+
+                                        if(storedExpiryDate.before(recvExpiryDate))
                                         {
                                             LatencyChecker.uriExpiryMap.put(message.getUri(), message.getExpiresDate());
+
                                             saveData(expiryString, creationTime, LGMessage.RENEW);
+
                                             System.out.println("message:" + message.getMessageId() + " Finished" + "--"
-                                                    + message.getMessageType() + " uri:" + message.getUri() + " errors?:"+ errorStatus);
+                                                    + message.getMessageType() + " uri:" + message.getUri()
+                                                    + " errors?:" + errorStatus);
+
                                             waitFlag = false;
+                                            break;
                                         }
                                         else
                                         {
-                                       /* System.out.println("Stored:"+ storedExpiryDate.toString() + " Recev:"
-                                                + message.getExpiresDate().toString() + "uri:" + message.getUri());*/
+                                            System.out.println(" State:"+ state + " Stored:" + storedExpiryDate + " Received:" + recvExpiryDate +" json:"+ json);
+                                            continue;
                                         }
                                     }
+                                    else
+                                    {
+                                        System.out.println("Renew of something without register"+" uri:" + message.getUri());
+                                    }
                                 }
+
                             }
                         }
                     }
+
                 }
                 else
                 {
@@ -202,13 +239,11 @@ public class Checker implements Runnable
             finally
             {
 
-
                 try
                 {
                     //clean up
                     response.close();
                     httpClient.close();
-
                 }
                 catch(Exception e)
                 {
@@ -235,6 +270,7 @@ public class Checker implements Runnable
                     {
                         System.out.println("message:" + message.getMessageId() + " TimedOut " + "--"
                                 + message.getMessageType() + " uri:" + message.getUri() + " errors?:"+ errorStatus );
+
                         saveData(null, null, message.getMessageType());
                     }
 

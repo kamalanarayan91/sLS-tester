@@ -25,8 +25,8 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     private CheckerThreadPool checkerThreadPool;
     public static final String SUBSCRIBEQUEUE = "Q2";
 
-    public static final String INDEXENDPOINT = "/data/latency";
-    public static String DATASTOREENDPOINT = "http://localhost:9200/data100/latency";
+    public static final String INDEXENDPOINT = "/500data/latency";
+    public static String DATASTOREENDPOINT = "";
 
     //public static final String QUERY= "/perfsonar/_search?q=uri:";
     public static final String QUERY= "/perfsonar/records/_search";
@@ -66,7 +66,10 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
         try
         {
             Date expiryDate = dateFormat.parse(expiresDate);
-            uriExpiryMap.put(uri, expiryDate);
+            if(uriExpiryMap.get(uri)==null)
+            {
+                uriExpiryMap.put(uri, expiryDate);
+            }
         }
         catch(ParseException e)
         {
@@ -105,10 +108,16 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
                                AMQP.BasicProperties props, byte[] body) throws IOException
     {
         LGMessage message = (LGMessage) SerializationUtils.deserialize(body);
-       // System.out.println("message:"+ message.getMessageId() +" received" + "--" + message.getMessageType() + " uri:"
-         //                       + message.getUri());
-        checkerThreadPool.checkLatency(message);
 
+        if(message.getMessageType().equals("REGISTER"))
+        {
+            if(message.getIsStored()==true && uriExpiryMap.get(message.getUri())==null)
+            {
+                uriExpiryMap.put(message.getUri() , message.getExpiresDate());
+            }
+
+        }
+        checkerThreadPool.checkLatency(message);
     }
 
     public void handleCancel(String consumerTag) {}
@@ -159,7 +168,6 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
                         "latency":{"type":"long"},
                         "uri":{"type":"string","index":"not_analyzed"}}}}}
                         */
-
     }
     public static void main(String[] args)
     {

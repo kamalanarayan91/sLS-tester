@@ -20,7 +20,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
 
     public static ConcurrentHashMap<Integer,Record> uriMap = new ConcurrentHashMap<Integer, Record>();
     public static AtomicInteger keyIndex = new AtomicInteger(0);
-    public static final int NUMENTRIES = 5000;
+    public static final int NUMENTRIES = 50000;
     public static AtomicInteger currentEntries = new AtomicInteger(0);
 
 
@@ -65,7 +65,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
 
         int currentNum = currentEntries.get();
 
-        if(currentNum<NUMENTRIES)
+        if(currentNum < NUMENTRIES)
         {
             uriMap.put(key, record);
             currentEntries.getAndIncrement();
@@ -109,7 +109,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
         {
 
             // start consuming messages. Auto acknowledge messages.
-            channel.basicConsume(endPointName, true,this);
+            channel.basicConsume(endPointName, true, this);
         }
         catch (IOException e)
         {

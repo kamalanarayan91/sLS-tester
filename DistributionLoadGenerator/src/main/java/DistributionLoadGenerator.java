@@ -2,12 +2,19 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import  java.util.*;
 import java.io.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 import com.google.gson.Gson;
+import com.rabbitmq.client.Channel;
 import com.sun.org.apache.regexp.internal.RE;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 
 /**
  * Created by kamala on 6/6/16.
@@ -31,10 +38,15 @@ public class DistributionLoadGenerator extends RMQEndPoint
     public int currentRecordIndex;
     public int currentId;
 
+    public static AtomicInteger keyIndex = new AtomicInteger(0);
+    public static final int NUMENTRIES = 5000;
+    public static AtomicInteger currentEntries = new AtomicInteger(0);
+
+
     public static final String sLSCoreHostName = "http://ps-cache.es.net:8090";
     public static final String pathName =  "/lookup/records";
     public static final int VALIDITY = 2;
-    public static final int NUMENTRIES = 5000;
+    public Random rand;
 
     public HashMap<Integer,Record> uriMap;
 
@@ -47,15 +59,21 @@ public class DistributionLoadGenerator extends RMQEndPoint
         this.mean = mean;
         distribution = new PoissonDistribution(mean);
         uriMap = new HashMap<Integer, Record>();
+        dataList = new ArrayList<HashMap<String, String>>();
+        rand = new Random();
     }
 
     /**
      * Gets the next delay
      * @return
      */
-    public long getRandomNumber()
+    public double getRandomNumber()
     {
-        return distribution.sample();
+
+
+        return  Math.log(1- rand.nextDouble())/(-mean);
+
+
     }
     /**
      * Generates random data
@@ -113,7 +131,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
         return uriMap.get(intKey);
     }
 
-    public static synchronized Record putInfo(String uri,String expiresDate)
+    public Record putInfo(String uri,String expiresDate)
     {
         int key = getNextKey();
         Record record = new Record(uri,expiresDate);
@@ -135,19 +153,25 @@ public class DistributionLoadGenerator extends RMQEndPoint
 
     }
 
-    public void main()
+    public static void main(String[] args)
     {
         long requestTime = 0;
-        populateDataList();
-        DistributionLoadGenerator distributionLoadGenerator = new DistributionLoadGenerator(QUEUENAME);
+
+        DistributionLoadGenerator distributionLoadGenerator = new DistributionLoadGenerator(0.5);
+        distributionLoadGenerator.populateDataList();
 
         while(true)
         {
             /*Sleep if one second hasn't passed */
-            long sleepTime = distributionLoadGenerator.getRandomNumber() * FACTOR;
+            //int num = distributionLoadGenerator.distribution.sample();
+
+            //long sleepTime =  num * FACTOR;
+            double sleep = distributionLoadGenerator.getRandomNumber();
+            System.out.println(sleep);
+            long sleepTime = new Double(sleep * FACTOR).longValue();
             long difference = sleepTime - requestTime;
 
-            System.out.println("sleepTime:" + sleepTime/FACTOR);
+            System.out.println("sleepTime:" + sleepTime);
 
             if(difference < 0)
             {
@@ -163,16 +187,21 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 e.printStackTrace();
             }
 
-            String requestType = getRequestType();
+            String requestType = distributionLoadGenerator.getRequestType();
+            System.out.println(requestType);
 
             long startTime = System.currentTimeMillis();
-            distributionLoadGenerator.sendRequest(requestType);
+           // distributionLoadGenerator.sendRequest(requestType);
             long endTime = System.currentTimeMillis();
 
             requestTime = endTime - startTime;
         }
     }
 
+    /**
+     * Gets the type of request to generate based on a random number
+     * @return
+     */
     public String getRequestType()
     {
         double rand = Math.random();
@@ -184,20 +213,19 @@ public class DistributionLoadGenerator extends RMQEndPoint
         return REGISTER;
     }
 
+    /**
+     * Send the request
+     * */
     public void sendRequest(String requestType)
     {
         if(requestType.equals(REGISTER))
         {
 
             /**/
-
             HashMap<String,String> map = dataList.get(currentRecordIndex);
 
             //set Message parameters
             map.put("Id",Integer.toString(currentId));
-
-            currentId++;
-            currentRecordIndex++;
 
             //handle register
             HashMap<String,String> msgDataMap =  map;
@@ -243,8 +271,8 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 br.close();
                 result = sb.toString();
 
-                HashMap<String,String> map= gson.fromJson(result,HashMap.class);
-                Record record = putInfo(map.get("uri"),map.get("expires"));
+                HashMap<String,String> map2 = gson.fromJson(result,HashMap.class);
+                Record record = putInfo(map2.get("uri"),map2.get("expires"));
 
                 //calculate created Time:
                 Date expiryDate = record.getExpiresDate();
@@ -255,7 +283,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 //
                 //publish to queue for latencyChecker to consume
                 LGMessage lgMessage = new LGMessage();
-                lgMessage.setMessageId(message.getMessageId());
+                lgMessage.setMessageId(currentId);
                 lgMessage.setTimestamp(successTime);
                 lgMessage.setUri(map.get("uri"));
                 lgMessage.setMessageType(LGMessage.REGISTER);
@@ -265,7 +293,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 //publishMessage(lgMessage);
                 publish(lgMessage);
 
-                System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType());
+                System.out.println("message:"+currentId +" FINISHED  -- " + requestType);
 
             }
             catch (UnsupportedEncodingException e)
@@ -287,11 +315,104 @@ public class DistributionLoadGenerator extends RMQEndPoint
             }
             /**/
 
+            //increment record indices.
+            currentId++;
+            currentRecordIndex++;
+
+
         }
         else
         {
+            if(uriMap.size()==0)
+            {
+                return;
+            }
+
+            try
+            {
+                // handle renew
+                Record record = getRandomRecord();
+                String uri = record.getUri();
+
+                // get connections from database
+                // get random db record
+                // send renew record.
+                String       postUrl       = sLSCoreHostName +"/" + uri;// put in your url
+                Gson         gson          = new Gson();
+                CloseableHttpClient httpClient    = HttpClients.createDefault();
+                HttpPost     post          = new HttpPost(postUrl);
+                post.setHeader("Content-type", "application/json");
+
+                CloseableHttpResponse response = httpClient.execute(post);
+
+                // get back response.
+                if(response.getStatusLine().getStatusCode() == 200)
+                {
+                    System.out.println("message:"+currentId +" FINISHED  -- " + RENEW);
+                }
+                else
+                {
+                    System.err.println("Status response: " + response.getStatusLine().getStatusCode());
+                }
+
+
+
+                //calculate created Time:
+                Date expiryDate = record.getExpiresDate();
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(expiryDate);
+                cal.add(Calendar.HOUR, -1 * VALIDITY);
+                Date successTime = cal.getTime();
+
+
+                //send to tier 3
+                //publish to queue for latencyChecker to consume
+                LGMessage lgMessage = new LGMessage();
+                lgMessage.setMessageId(currentId);
+                lgMessage.setTimestamp(successTime);
+                lgMessage.setUri(record.getUri());
+                lgMessage.setMessageType(LGMessage.RENEW);
+                lgMessage.setExpiresDate(record.getExpiresDate());
+
+                //publish
+                publish(lgMessage);
+
+                //cleanup
+                response.close();
+                httpClient.close();
+                currentId++;
+
+
+            }
+            catch(IOException e)
+            {
+                System.out.println("There's an error in the sending the http renew request");
+                e.printStackTrace();
+
+            }
+
+
 
         }
+
+    }
+
+
+    public void publish(LGMessage message)
+    {
+
+        try
+        {
+
+            channel.basicPublish("", QUEUENAME, null, SerializationUtils.serialize(message));
+            channel.close();
+        }
+        catch(Exception e)
+        {
+            System.err.println("Error in serializing message");
+        }
+
+
 
     }
 

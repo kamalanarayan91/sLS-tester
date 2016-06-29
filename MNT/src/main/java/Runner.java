@@ -46,7 +46,6 @@ public class Runner
     public static Date getSeedTime() throws Exception
     {
         //get current timestamp;
-
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         Calendar calendar = Calendar.getInstance();
         System.out.println(dateFormat.format(calendar.getTime())); //2014/08/06 16:00:22
@@ -56,7 +55,7 @@ public class Runner
         //2016-06-11T14:43:35
 
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        String dateString = "2016-06-14T16:00:00";
+        String dateString = "2016-06-14T18:00:00";
         Date date = df.parse(dateString);
         calendar.setTime(date);
 
@@ -66,8 +65,6 @@ public class Runner
 
     public static void main(String[] args) throws Exception
     {
-
-
         System.out.println("Feeder Starting..");
 
         /*Log Feeder*/
@@ -81,6 +78,5 @@ public class Runner
         KeyValueGenerator kvGenerator = new KeyValueGenerator();
         Thread keyValueGenThread = new Thread(kvGenerator);
         keyValueGenThread.start();
-
     }
 }

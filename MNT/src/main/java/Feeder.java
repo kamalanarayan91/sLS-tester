@@ -9,7 +9,11 @@ import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.io.*;
+
+
+import org.apache.logging.log4j.Logger;
+
+
 
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -34,13 +38,14 @@ public class Feeder implements Runnable
     private long lastExecutionTime = -1;
     private long interval=1100; // 1 second
 
+
     /*getters and setters*/
 
     public Date getSeedTimeStamp()
     {
-
         return seedTimeStamp;
     }
+
 
     public void setSeedTimeStamp(Date seedTimeStamp)
     {
@@ -59,13 +64,11 @@ public class Feeder implements Runnable
 
     public int getPeriod()
     {
-
         return period;
     }
 
     public void setPeriod(int period)
     {
-
         this.period = period;
     }
     /*END - getters and setters*/
@@ -73,6 +76,7 @@ public class Feeder implements Runnable
     public Feeder()
     {
         calendar = Calendar.getInstance();
+
 
     }
 
@@ -137,8 +141,8 @@ public class Feeder implements Runnable
 
             //once every second.
             calendar.add(Calendar.SECOND,1);
-            nextTimeStamp = calendar.getTime();//2016-05-10T05:15:00
 
+            nextTimeStamp = calendar.getTime();//2016-05-10T05:15:00
 
             SearchResponse renewSearch = esClient.prepareSearch()
                     .setTypes("logs")
@@ -147,8 +151,6 @@ public class Feeder implements Runnable
                             QueryBuilders.matchQuery("message","renewService")))
                     .execute()
                     .actionGet();
-
-
 
             SearchResponse registerSearch = esClient.prepareSearch()
                     .setTypes("logs")

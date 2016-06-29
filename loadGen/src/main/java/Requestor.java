@@ -117,7 +117,8 @@ public class Requestor implements Runnable
                 //publishMessage(lgMessage);
                 publish(lgMessage);
 
-                System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType());
+                System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
+                                        +" uri:" + map.get("uri"));
 
             }
             catch (UnsupportedEncodingException e)
@@ -162,7 +163,8 @@ public class Requestor implements Runnable
                 // get back response.
                 if(response.getStatusLine().getStatusCode() == 200)
                 {
-                    System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType());
+                    System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
+                            +" uri:" + uri  );
                 }
                 else
                 {
@@ -177,7 +179,6 @@ public class Requestor implements Runnable
                 cal.setTime(expiryDate);
                 cal.add(Calendar.HOUR, -1 * VALIDITY);
                 Date successTime = cal.getTime();
-
 
                 //send to tier 3
                 //publish to queue for latencyChecker to consume
@@ -200,6 +201,7 @@ public class Requestor implements Runnable
             catch(IOException e)
             {
                 System.out.println("There's an error in the sending the http renew request");
+                e.printStackTrace();
 
             }
 

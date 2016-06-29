@@ -16,13 +16,12 @@ public class Record
         this.uri = uri;
         TimeZone tz = TimeZone.getTimeZone("UTC");
         dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-        //DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
         dateFormat.setTimeZone(tz);
 
         try
         {
             expiresDate = dateFormat.parse(expiresString);
-            //ystem.out.println(expiresDate);
+
         }
         catch(ParseException e)
         {

@@ -47,6 +47,9 @@ public abstract class RMQEndPoint
             //declaring a queue for this channel. If queue does not exist,
             //it will be created on the server.
             channel.queueDeclare(endpointName, false, false, false, null);
+
+            //channel.basicQos(100);
+
         }
         catch(Exception e)
         {
