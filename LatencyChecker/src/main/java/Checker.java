@@ -209,13 +209,13 @@ public class Checker implements Runnable
                                         }
                                         else
                                         {
-                                            System.out.println(" State:"+ state + " Stored:" + storedExpiryDate + " Received:" + recvExpiryDate +" json:"+ json);
+                                           // System.out.println(" State:"+ state + " Stored:" + storedExpiryDate + " Received:" + recvExpiryDate +" json:"+ json);
                                             continue;
                                         }
                                     }
                                     else
                                     {
-                                        System.out.println("Renew of something without register"+" uri:" + message.getUri());
+                                       // System.out.println("Renew of something without register"+" uri:" + message.getUri());
                                     }
                                 }
 
@@ -304,8 +304,22 @@ public class Checker implements Runnable
         //T
         resultMap.put("T",LatencyChecker.T);
 
-        //Response Time
-        resultMap.put("latency",calculateTimeDifference(creationTimeStamp));
+        long time = calculateTimeDifference(creationTimeStamp);
+        if(time > EXECUTIONLIMIT* REGISTERLOOPTIME)
+        {
+            time = -1;
+        }
+
+        if(time != -1)
+        {
+            //Response Time
+            resultMap.put("latency", time);
+            resultMap.put("result","SUCCESS");
+        }
+        else
+        {
+            resultMap.put("result","TIMEOUT");
+        }
 
         //uri
         resultMap.put("uri",message.getUri());

@@ -117,8 +117,8 @@ public class Requestor implements Runnable
                 //publishMessage(lgMessage);
                 publish(lgMessage);
 
-                System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
-                                        +" uri:" + map.get("uri"));
+               // System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
+                //                        +" uri:" + map.get("uri") + " stored?: " + record.getIsStored());
 
             }
             catch (UnsupportedEncodingException e)
@@ -143,6 +143,8 @@ public class Requestor implements Runnable
 
         else if(message.getMessageType().equals(KVGMessage.RENEW))
         {
+            CloseableHttpClient   httpClient = null;
+            CloseableHttpResponse  response =null;
             try
             {
                 // handle renew
@@ -154,47 +156,53 @@ public class Requestor implements Runnable
                 // send renew record.
                 String       postUrl       = sLSCoreHostName +"/" + uri;// put in your url
                 Gson         gson          = new Gson();
-                CloseableHttpClient   httpClient    = HttpClients.createDefault();
+                 httpClient   = HttpClients.createDefault();
                 HttpPost     post          = new HttpPost(postUrl);
                 post.setHeader("Content-type", "application/json");
 
-                CloseableHttpResponse  response = httpClient.execute(post);
+                response = httpClient.execute(post);
 
                 // get back response.
+                boolean success = false;
                 if(response.getStatusLine().getStatusCode() == 200)
                 {
-                    System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
-                            +" uri:" + uri  );
+                  //  System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
+                  //          +" uri:" + uri  );
+                    success = true;
                 }
                 else
                 {
                     System.err.println("Status response: " + response.getStatusLine().getStatusCode());
+
                 }
 
 
+                if(success)
+                {
+                    //calculate created Time:
+                    Date expiryDate = record.getExpiresDate();
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(expiryDate);
+                    cal.add(Calendar.HOUR, -1 * VALIDITY);
+                    Date successTime = cal.getTime();
 
-                //calculate created Time:
-                Date expiryDate = record.getExpiresDate();
-                Calendar cal = Calendar.getInstance();
-                cal.setTime(expiryDate);
-                cal.add(Calendar.HOUR, -1 * VALIDITY);
-                Date successTime = cal.getTime();
+                    //send to tier 3
+                    //publish to queue for latencyChecker to consume
+                    LGMessage lgMessage = new LGMessage();
+                    lgMessage.setMessageId(message.getMessageId());
+                    lgMessage.setTimestamp(successTime);
+                    lgMessage.setUri(record.getUri());
+                    lgMessage.setMessageType(LGMessage.RENEW);
+                    lgMessage.setExpiresDate(record.getExpiresDate());
 
-                //send to tier 3
-                //publish to queue for latencyChecker to consume
-                LGMessage lgMessage = new LGMessage();
-                lgMessage.setMessageId(message.getMessageId());
-                lgMessage.setTimestamp(successTime);
-                lgMessage.setUri(record.getUri());
-                lgMessage.setMessageType(LGMessage.RENEW);
-                lgMessage.setExpiresDate(record.getExpiresDate());
+                    //publish
+                    publish(lgMessage);
+                }
+                else
+                {
+                    System.out.println("ERROR!");
+                }
 
-                //publish
-                publish(lgMessage);
-
-                //cleanup
-                response.close();
-                httpClient.close();
 
 
             }
@@ -203,6 +211,22 @@ public class Requestor implements Runnable
                 System.out.println("There's an error in the sending the http renew request");
                 e.printStackTrace();
 
+            }
+            finally {
+
+                try {
+                    //cleanup
+                    if (response != null) {
+                        response.close();
+                    }
+                    if (httpClient != null) {
+                        httpClient.close();
+                    }
+                }
+                catch(IOException e)
+                {
+
+                }
             }
 
 
@@ -223,6 +247,8 @@ public class Requestor implements Runnable
         {
             Channel channel = MessageSender.getChannel();
             channel.basicPublish("", LoadGenerator.PUBLISHQUEUE, null, SerializationUtils.serialize(message));
+            System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
+                    +" uri:" + message.getUri()  );
             channel.close();
         }
         catch(Exception e)

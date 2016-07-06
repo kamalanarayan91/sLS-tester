@@ -16,6 +16,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by kamala on 6/1/16.
@@ -25,7 +26,8 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     private CheckerThreadPool checkerThreadPool;
     public static final String SUBSCRIBEQUEUE = "Q2";
 
-    public static final String INDEXENDPOINT = "/500data/latency";
+    public static final String INDEXENDPOINT = "/1000" +
+            "/latency";
     public static String DATASTOREENDPOINT = "";
 
     //public static final String QUERY= "/perfsonar/_search?q=uri:";
@@ -42,6 +44,8 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
 
 
     public static ConcurrentHashMap<String,Date> uriExpiryMap = new ConcurrentHashMap<String, Date>();
+
+    public static AtomicInteger nextRequest = new AtomicInteger(2);
 
 
     public static long N = -1;
@@ -109,14 +113,32 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     {
         LGMessage message = (LGMessage) SerializationUtils.deserialize(body);
 
+
+
         if(message.getMessageType().equals("REGISTER"))
         {
-            if(message.getIsStored()==true && uriExpiryMap.get(message.getUri())==null)
+            if(message.getIsStored()== true && LatencyChecker.uriExpiryMap.get(message.getUri())==null)
             {
-                uriExpiryMap.put(message.getUri() , message.getExpiresDate());
+                LatencyChecker.uriExpiryMap.put(message.getUri() , message.getExpiresDate());
+                System.err.println("mess:" + message.getMessageId() + " Stored:" + " id:" + message.getUri() + " date: " +  message.getExpiresDate());
+            }
+            else
+            {
+                System.err.println( " mess:" + message.getMessageId() + " NotStored:" + " id:" + message.getUri() + " date: " + message.getExpiresDate());
             }
 
         }
+
+        if(message.getMessageType().equals("RENEW"))
+        {
+            if(LatencyChecker.uriExpiryMap.get(message.getUri())==null)
+            {
+                System.out.println("Renew of something without register"+" uri:" + message.getUri() + " id:" + message.getMessageId() );
+            }
+
+        }
+
+
         checkerThreadPool.checkLatency(message);
     }
 
@@ -141,9 +163,14 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
         M = Long.parseLong(args[0]);
         N = Long.parseLong(args[1]);
         T = Double.parseDouble(args[2]);
+        System.out.println("M:"+M +" N: "+ N + " T:" + T);
+
         SLSCACHEENDPOINT = "http://"+args[3]+":9200"+ QUERY;
         DATASTOREENDPOINT = "http://"+args[4]+":9200"+ INDEXENDPOINT;
         MAXWAITTIME = Integer.parseInt(args[5])*1000*60;
+
+        System.out.println("Cache: "+ SLSCACHEENDPOINT);
+        System.out.println("DataStore:"+ DATASTOREENDPOINT);
     }
 
     /**
@@ -171,7 +198,7 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     }
     public static void main(String[] args)
     {
-        if(args.length!=6)
+        if(args.length != 6)
         {
             printHelp();
             System.exit(-1);

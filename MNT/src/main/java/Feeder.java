@@ -147,8 +147,10 @@ public class Feeder implements Runnable
             SearchResponse renewSearch = esClient.prepareSearch()
                     .setTypes("logs")
                     .setSearchType(SearchType.QUERY_AND_FETCH)
-                    .setQuery(QueryBuilders.andQuery(QueryBuilders.rangeQuery("@timestamp").gte(dateFormat.format(currentTimeStamp)).lt(dateFormat.format(nextTimeStamp)),
-                            QueryBuilders.matchQuery("message","renewService")))
+                    .setQuery(  QueryBuilders.andQuery(QueryBuilders.rangeQuery("@timestamp")
+                                                    .gte(dateFormat.format(currentTimeStamp))
+                                                    .lt(dateFormat.format(nextTimeStamp)),
+                                QueryBuilders.matchQuery("message","renewService")))
                     .execute()
                     .actionGet();
 

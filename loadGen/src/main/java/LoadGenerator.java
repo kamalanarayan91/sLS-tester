@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -68,6 +69,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
         if(currentNum < NUMENTRIES)
         {
             uriMap.put(key, record);
+
             currentEntries.getAndIncrement();
             record.setIsStored(true);
         }
@@ -94,10 +96,16 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
              * required.
              **/
         }
-        double key = Math.random() * uriMap.size();
+
+        Random generator = new Random();
+        Object[] values = uriMap.values().toArray();
+        Object randomValue = values[generator.nextInt(values.length)];
+
+        return (Record) randomValue;
+        /*double key = Math.random() * uriMap.size();
         Double keyD = new Double(key);
         int intKey = keyD.intValue();
-        return uriMap.get(intKey);
+        return uriMap.get(intKey);*/
     }
 
     /**

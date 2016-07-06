@@ -153,51 +153,6 @@ public class DistributionLoadGenerator extends RMQEndPoint
 
     }
 
-    public static void main(String[] args)
-    {
-        long requestTime = 0;
-
-        DistributionLoadGenerator distributionLoadGenerator = new DistributionLoadGenerator(0.5);
-        distributionLoadGenerator.populateDataList();
-
-        while(true)
-        {
-            /*Sleep if one second hasn't passed */
-            //int num = distributionLoadGenerator.distribution.sample();
-
-            //long sleepTime =  num * FACTOR;
-            double sleep = distributionLoadGenerator.getRandomNumber();
-            System.out.println(sleep);
-            long sleepTime = new Double(sleep * FACTOR).longValue();
-            long difference = sleepTime - requestTime;
-
-            System.out.println("sleepTime:" + sleepTime);
-
-            if(difference < 0)
-            {
-                continue;
-            }
-
-            try
-            {
-                Thread.sleep(difference);
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
-
-            String requestType = distributionLoadGenerator.getRequestType();
-            System.out.println(requestType);
-
-            long startTime = System.currentTimeMillis();
-           // distributionLoadGenerator.sendRequest(requestType);
-            long endTime = System.currentTimeMillis();
-
-            requestTime = endTime - startTime;
-        }
-    }
-
     /**
      * Gets the type of request to generate based on a random number
      * @return
@@ -405,7 +360,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
         {
 
             channel.basicPublish("", QUEUENAME, null, SerializationUtils.serialize(message));
-            channel.close();
+
         }
         catch(Exception e)
         {
@@ -415,5 +370,53 @@ public class DistributionLoadGenerator extends RMQEndPoint
 
 
     }
+
+    public static void main(String[] args)
+    {
+        long requestTime = 0;
+
+        DistributionLoadGenerator distributionLoadGenerator = new DistributionLoadGenerator(0.5);
+        distributionLoadGenerator.populateDataList();
+
+        while(true)
+        {
+            /*Sleep if one second hasn't passed */
+            long sleepTime = 1000;
+            long difference = sleepTime - requestTime;
+
+            int numRequests = distributionLoadGenerator.distribution.sample();
+
+            System.out.println("sleepTime:" + sleepTime);
+
+            if(difference < 0)
+            {
+                continue;
+            }
+
+            try
+            {
+                Thread.sleep(difference);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+
+
+            long startTime = System.currentTimeMillis();
+            for(int index=0;index<numRequests;index++)
+            {
+                String requestType = distributionLoadGenerator.getRequestType();
+                System.out.println(requestType);
+
+                distributionLoadGenerator.sendRequest(requestType);
+            }
+            long endTime = System.currentTimeMillis();
+
+            requestTime = endTime - startTime;
+        }
+    }
+
+
 
 }
