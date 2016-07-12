@@ -26,7 +26,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
 
     private long interval=1100; // 1 second
     private AbstractIntegerDistribution distribution;
-    private double ratio = 0.9; //90% register and 10% renew
+    private double ratio = 0.8; //90% register and 10% renew
 
     private static final String RENEW = "RENEW";
     private static final String REGISTER = "REGISTER";
@@ -47,6 +47,8 @@ public class DistributionLoadGenerator extends RMQEndPoint
     public static final String pathName =  "/lookup/records";
     public static final int VALIDITY = 2;
     public Random rand;
+    public static int counter = 0;
+    public static int MEAN = 100;
 
     public HashMap<Integer,Record> uriMap;
 
@@ -240,7 +242,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 LGMessage lgMessage = new LGMessage();
                 lgMessage.setMessageId(currentId);
                 lgMessage.setTimestamp(successTime);
-                lgMessage.setUri(map.get("uri"));
+                lgMessage.setUri(map2.get("uri"));
                 lgMessage.setMessageType(LGMessage.REGISTER);
                 lgMessage.setExpiresDate(record.getExpiresDate());
                 lgMessage.setIsStored(record.getIsStored());
@@ -248,7 +250,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 //publishMessage(lgMessage);
                 publish(lgMessage);
 
-                System.out.println("message:"+currentId +" FINISHED  -- " + requestType);
+
 
             }
             catch (UnsupportedEncodingException e)
@@ -273,6 +275,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
             //increment record indices.
             currentId++;
             currentRecordIndex++;
+            currentRecordIndex = currentRecordIndex%TOTALENTRIES;
 
 
         }
@@ -303,7 +306,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 // get back response.
                 if(response.getStatusLine().getStatusCode() == 200)
                 {
-                    System.out.println("message:"+currentId +" FINISHED  -- " + RENEW);
+
                 }
                 else
                 {
@@ -338,6 +341,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 currentId++;
 
 
+
             }
             catch(IOException e)
             {
@@ -360,6 +364,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
         {
 
             channel.basicPublish("", QUEUENAME, null, SerializationUtils.serialize(message));
+            System.out.println("Counter "+counter +" MessNumber:"+ message.getMessageId() + " type:" + message.getMessageType()  +" uri:"+ message.getUri() + " FINISHED");
 
         }
         catch(Exception e)
@@ -375,7 +380,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
     {
         long requestTime = 0;
 
-        DistributionLoadGenerator distributionLoadGenerator = new DistributionLoadGenerator(0.5);
+        DistributionLoadGenerator distributionLoadGenerator = new DistributionLoadGenerator(MEAN);
         distributionLoadGenerator.populateDataList();
 
         while(true)
@@ -386,16 +391,14 @@ public class DistributionLoadGenerator extends RMQEndPoint
 
             int numRequests = distributionLoadGenerator.distribution.sample();
 
-            System.out.println("sleepTime:" + sleepTime);
-
-            if(difference < 0)
-            {
-                continue;
-            }
-
             try
             {
-                Thread.sleep(difference);
+                Thread.sleep(1000);
+                counter++;
+                System.out.println("Counter:"+counter +" num:"+ numRequests);
+
+                if(counter==600)
+                    System.exit(10000);
             }
             catch (InterruptedException e)
             {
@@ -407,8 +410,6 @@ public class DistributionLoadGenerator extends RMQEndPoint
             for(int index=0;index<numRequests;index++)
             {
                 String requestType = distributionLoadGenerator.getRequestType();
-                System.out.println(requestType);
-
                 distributionLoadGenerator.sendRequest(requestType);
             }
             long endTime = System.currentTimeMillis();

@@ -1,12 +1,21 @@
+import com.google.gson.Gson;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Envelope;
 import com.rabbitmq.client.ShutdownSignalException;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import com.rabbitmq.client.Consumer;
 import org.apache.commons.lang.SerializationUtils;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -15,6 +24,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,11 +36,14 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     private CheckerThreadPool checkerThreadPool;
     public static final String SUBSCRIBEQUEUE = "Q2";
 
-    public static final String INDEXENDPOINT = "/1000" +
-            "/latency";
+    public static long N = 1000 ;
+    public static long M = 1200;
+    public static double T = 2;
+    public static final String INDEX= "/1000extreme";
+    public static final String INDEXENDPOINT = "/latency";
     public static String DATASTOREENDPOINT = "";
+    public static String MAPPINGENDPOINT = "";
 
-    //public static final String QUERY= "/perfsonar/_search?q=uri:";
     public static final String QUERY= "/perfsonar/records/_search";
 
     public static int MAXWAITTIME = 2000 * 60;
@@ -48,9 +61,6 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     public static AtomicInteger nextRequest = new AtomicInteger(2);
 
 
-    public static long N = -1;
-    public static long M = -1;
-    public static double T = -1;
 
 
     public static DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
@@ -120,23 +130,13 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
             if(message.getIsStored()== true && LatencyChecker.uriExpiryMap.get(message.getUri())==null)
             {
                 LatencyChecker.uriExpiryMap.put(message.getUri() , message.getExpiresDate());
-                System.err.println("mess:" + message.getMessageId() + " Stored:" + " id:" + message.getUri() + " date: " +  message.getExpiresDate());
-            }
-            else
-            {
-                System.err.println( " mess:" + message.getMessageId() + " NotStored:" + " id:" + message.getUri() + " date: " + message.getExpiresDate());
+
             }
 
         }
 
-        if(message.getMessageType().equals("RENEW"))
-        {
-            if(LatencyChecker.uriExpiryMap.get(message.getUri())==null)
-            {
-                System.out.println("Renew of something without register"+" uri:" + message.getUri() + " id:" + message.getMessageId() );
-            }
 
-        }
+
 
 
         checkerThreadPool.checkLatency(message);
@@ -160,13 +160,12 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
      */
     public static void initialize(String[] args)
     {
-        M = Long.parseLong(args[0]);
-        N = Long.parseLong(args[1]);
-        T = Double.parseDouble(args[2]);
+
         System.out.println("M:"+M +" N: "+ N + " T:" + T);
 
         SLSCACHEENDPOINT = "http://"+args[3]+":9200"+ QUERY;
-        DATASTOREENDPOINT = "http://"+args[4]+":9200"+ INDEXENDPOINT;
+        MAPPINGENDPOINT = "http://"+args[4]+":9200"+ INDEX;
+        DATASTOREENDPOINT = "http://"+args[4]+":9200"+ INDEX+INDEXENDPOINT;
         MAXWAITTIME = Integer.parseInt(args[5])*1000*60;
 
         System.out.println("Cache: "+ SLSCACHEENDPOINT);
@@ -179,23 +178,61 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
      */
     public static void initializeElasticSearch()
     {
+       String mappingJSONString=  "{\"mappings\": " +
+                                        "{\"latency\": " +
+                                            "{\"properties\":         " +
+                                                "{\"latency\":  {\"type\":\"long\"},       " +
+                                                "\"M\":{\"type\":\"long\"}," +
+                                                "\"N\":{\"type\":\"long\"}," +
+                                                "\"T\":{\"type\":\"long\"}," +
+                                                "\"creationTime:\":{\"type\":\"date\",\"format\":\"strict_date_optional_time||epoch_millis\"}," +
+                                                "\"expires\":{\"type\":\"date\",\"format\":\"strict_date_optional_time||epoch_millis\"}," +
+                                                "\"messageType\":{\"type\":\"string\",\"index\":\"not_analyzed\"}," +
+                                                "\"uri\":{\"type\":\"string\",\"index\":\"not_analyzed\"}," +
+                                                "\"result\":{\"type\":\"string\",\"index\":\"not_analyzed\"}" +
+                                                "}}}}";
 
-        /*
-        * 	{"mappings":
-    	{"latency":
-        	{"properties":
-            	{"Latency":
-                	{"type":"double"},
-                    	"M":{"type":"long"},
-						"N":{"type":"long"},
-                        "T":{"type":"double"},
-                        "creationTime:":{"type":"date","format":"strict_date_optional_time||epoch_millis"},
-                        "expires":{"type":"date","format":"strict_date_optional_time||epoch_millis"},
-                        "messageType":{"type":"string","index":"not_analyzed"},
-                        "latency":{"type":"long"},
-                        "uri":{"type":"string","index":"not_analyzed"}}}}}
-                        */
+
+        Gson gson = new Gson();
+        String json = mappingJSONString;
+
+        //send to ES store
+        try
+        {
+
+            CloseableHttpClient httpClient    = HttpClients.createDefault();
+            HttpPost post          = new HttpPost(MAPPINGENDPOINT);
+            post.setHeader("Content-type", "application/json");
+            StringEntity stringEntity = new StringEntity(json);
+            post.setEntity(stringEntity);
+
+            CloseableHttpResponse response = httpClient.execute(post);
+
+            // get back response.
+            if(response.getStatusLine().getStatusCode() == 200)
+            {
+                System.out.println("Index Created!");
+            }
+            else
+            {
+                System.err.println("Status response from Data Store: " + response.getStatusLine().getStatusCode());
+
+            }
+
+            //clean up
+            response.close();
+            post.releaseConnection();
+            httpClient.close();
+
+        }
+        catch(IOException e)
+        {
+            System.out.println("There's an error in the sending the mapping request");
+
+        }
     }
+
+
     public static void main(String[] args)
     {
         if(args.length != 6)
