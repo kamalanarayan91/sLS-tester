@@ -156,7 +156,7 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
         SLSCACHEENDPOINT = "http://"+args[3]+":9200"+ QUERY;
         MAPPINGENDPOINT = "http://"+args[4]+":9200"+ INDEX;
         DATASTOREENDPOINT = "http://"+args[4]+":9200"+ INDEX+INDEXENDPOINT;
-        MAXWAITTIME = Integer.parseInt(args[5])*1000*60;
+
 
         System.out.println("Cache: "+ SLSCACHEENDPOINT);
         System.out.println("DataStore:"+ DATASTOREENDPOINT);
