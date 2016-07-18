@@ -7,24 +7,16 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
 import com.rabbitmq.client.Consumer;
 import org.apache.commons.lang.SerializationUtils;
-import org.joda.time.DateTime;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,11 +28,15 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     private CheckerThreadPool checkerThreadPool;
     public static final String SUBSCRIBEQUEUE = "Q2";
 
-    public static long N = 1000 ;
-    public static long M = 1200;
-    public static double T = 2;
-    public static final String INDEX= "/1000extreme";
+    public static long N = 500 ;
+    public static long M = 800 ;
+    public static double T = 120;
+
+    /***Change this for Index****/
+    public static final String INDEX= "/n500_mean2_timeout30";
     public static final String INDEXENDPOINT = "/latency";
+    /***************/
+
     public static String DATASTOREENDPOINT = "";
     public static String MAPPINGENDPOINT = "";
 
@@ -122,9 +118,6 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
                                AMQP.BasicProperties props, byte[] body) throws IOException
     {
         LGMessage message = (LGMessage) SerializationUtils.deserialize(body);
-
-
-
         if(message.getMessageType().equals("REGISTER"))
         {
             if(message.getIsStored()== true && LatencyChecker.uriExpiryMap.get(message.getUri())==null)
@@ -134,11 +127,6 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
             }
 
         }
-
-
-
-
-
         checkerThreadPool.checkLatency(message);
     }
 
@@ -149,8 +137,8 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
 
     public static void printHelp()
     {
-        System.out.println("java LatencyChecker <M> <N> <T> <SlsCacheHostName> <FinalDataStoreHostName> <maxthreadWaitTime>");
-        System.out.println("example: java LatencyChecker 100 100 100  localhost 192.168.56.103 2" );
+        System.out.println("java LatencyChecker <M> <N> <T> <SlsCacheHostName> <FinalDataStoreHostName>");
+        System.out.println("example: 500 800 2 ps-cache-west.es.net sowmya-dev-vm.es.net" );
         System.out.println("thread wait time should be in minutes");
     }
 
@@ -162,7 +150,9 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
     {
 
         System.out.println("M:"+M +" N: "+ N + " T:" + T);
-
+        M = Long.parseLong(args[0]);
+        N = Long.parseLong(args[1]);
+        T = Long.parseLong(args[2]);
         SLSCACHEENDPOINT = "http://"+args[3]+":9200"+ QUERY;
         MAPPINGENDPOINT = "http://"+args[4]+":9200"+ INDEX;
         DATASTOREENDPOINT = "http://"+args[4]+":9200"+ INDEX+INDEXENDPOINT;
@@ -216,6 +206,7 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
             else
             {
                 System.err.println("Status response from Data Store: " + response.getStatusLine().getStatusCode());
+                System.err.println("The Index might already Exist in the data Store. Please delete it if not needed");
 
             }
 
@@ -235,14 +226,13 @@ public class LatencyChecker extends RMQEndPoint implements Consumer
 
     public static void main(String[] args)
     {
-        if(args.length != 6)
+        if(args.length != 5)
         {
             printHelp();
             System.exit(-1);
         }
 
         initialize(args);
-
         LatencyChecker latencyChecker = new LatencyChecker();
         latencyChecker.initializeElasticSearch();
         latencyChecker.startConsumer();

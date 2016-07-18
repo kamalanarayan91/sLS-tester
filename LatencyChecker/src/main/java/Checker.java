@@ -39,19 +39,21 @@ public class Checker implements Runnable
     private LGMessage message;
     private static final long DROP = -1;
 
-    public static final int REGISTERLOOPTIME = 30000;//30 seconds
+    /** Configure **/
+    public static final int SLEEPINTERVAL = 30000;//30 seconds
+    public static final int EXECUTIONLIMIT = 60; //30 mins total
+    public static final long INITIALSLEEPTIME = 10 * 1000; // 10 seconds
+    /** End - Configure **/
+
     private int executionCount;
-    private static final int EXECUTIONLIMIT = 16;
     public static final String REGISTEREDINCACHE = "registered";
     public static final String RENEWEDINCACHE = "renewed";
-
 
     public Checker(LGMessage message)
     {
         executionCount= 0;
         this.message = message;
         Log log = LogFactory.getLog(JSONObject.class);
-
     }
 
     public void run()
@@ -59,14 +61,14 @@ public class Checker implements Runnable
 
         try
         {
-            Thread.sleep(10*1000);
+            Thread.sleep(INITIALSLEEPTIME);
         }
         catch(Exception e)
         {
 
         }
-        String uri = message.getUri();
-        long firstExecutionTime = System.currentTimeMillis();
+
+
 
         /*POST JSON
         {
@@ -176,8 +178,7 @@ public class Checker implements Runnable
                                     }
 
                                     System.out.println("message:" + message.getMessageId() + " Finished" + "--"
-                                            + message.getMessageType() + " uri:" + message.getUri()
-                                            + " errors?:" + errorStatus);
+                                            + message.getMessageType() + " uri:" + message.getUri());
 
                                     waitFlag = false;
                                     break;
@@ -201,8 +202,7 @@ public class Checker implements Runnable
                                             saveData(expiryString, creationTime, LGMessage.RENEW);
 
                                             System.out.println("message:" + message.getMessageId() + " Finished" + "--"
-                                                    + message.getMessageType() + " uri:" + message.getUri()
-                                                    + " errors?:" + errorStatus);
+                                                    + message.getMessageType() + " uri:" + message.getUri());
 
                                             waitFlag = false;
                                             break;
@@ -247,10 +247,8 @@ public class Checker implements Runnable
                 }
                 catch(Exception e)
                 {
-
+                    e.printStackTrace();
                 }
-
-
 
             }
 
@@ -262,7 +260,7 @@ public class Checker implements Runnable
                    // System.out.println("message:" + message.getMessageId() + " SLEEP " + "--"
                      //       + message.getMessageType() + "uri:" + message.getUri());
 
-                    Thread.sleep(REGISTERLOOPTIME);
+                    Thread.sleep(SLEEPINTERVAL);
                 }
                 else
                 {
@@ -305,12 +303,12 @@ public class Checker implements Runnable
         resultMap.put("T",LatencyChecker.T);
 
         long time = calculateTimeDifference(creationTimeStamp);
-        if(time > EXECUTIONLIMIT* REGISTERLOOPTIME)
+        if(time > EXECUTIONLIMIT* SLEEPINTERVAL)
         {
-            time = -1;
+            time = DROP;
         }
 
-        if(time != -1)
+        if(time != DROP)
         {
             //Response Time
             resultMap.put("latency", time);
@@ -380,21 +378,21 @@ public class Checker implements Runnable
     /**
      * Calculates the latency
      */
-    public long calculateTimeDifference(Date creationTimeStamp)
+    public long calculateTimeDifference(Date cacheCreationTimeStamp)
     {
         //calculate TimeDifference:
-        if(creationTimeStamp==null)
+        if(cacheCreationTimeStamp==null)
         {
             return DROP;
         }
-        Date successTime = message.getTimestamp();
+        Date coreSuccessTime = message.getTimestamp();
 
 
-        if(creationTimeStamp.getTime()-successTime.getTime() < 0)
+        if(cacheCreationTimeStamp.getTime()-coreSuccessTime.getTime() < 0) // impossible
         {
-            System.out.println("successTime:"+successTime.getTime()+" cTime:"+creationTimeStamp.getTime());
+            System.out.println("successTime:"+coreSuccessTime.getTime()+" cTime:"+cacheCreationTimeStamp.getTime());
         }
-        return  creationTimeStamp.getTime() - successTime.getTime() ;
+        return  cacheCreationTimeStamp.getTime() - coreSuccessTime.getTime() ;
     }
 
 }

@@ -13,13 +13,13 @@ public class CheckerThreadPool
     public CheckerThreadPool()
     {
         threadPool =  Executors.newFixedThreadPool(NUMTHREADS);
-        //threadPool = Executors.newCachedThreadPool();
     }
 
     public void checkLatency(LGMessage message)
     {
         Checker request = new Checker(message);
         threadPool.execute(request);
-
     }
+
+
 }
