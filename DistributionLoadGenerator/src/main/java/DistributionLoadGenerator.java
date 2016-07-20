@@ -138,7 +138,9 @@ public class DistributionLoadGenerator extends RMQEndPoint
              **/
         }
 
-        double key = Math.random() * uriMap.size();
+        double key = (Math.random() * 100) % uriMap.size();
+
+        System.out.println(key);
         Double keyD = new Double(key);
         int intKey = keyD.intValue();
         return uriMap.get(intKey);
@@ -421,7 +423,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                 counter++;
                 System.out.println("Counter:"+counter +" num:"+ numRequests);
 
-                if(counter==RUNLIMIT)
+                if(counter > RUNLIMIT)
                 {
                     System.exit(10000);
                 }
@@ -446,7 +448,7 @@ public class DistributionLoadGenerator extends RMQEndPoint
                             = new RequestSenderThread(totalLatch, map, distributionLoadGenerator,currentId,requestType);
 
 
-                    executorService.execute(requestSender);
+                    //executorService.execute(requestSender);
                     currentId++;
                     currentRecordIndex++;
                     currentRecordIndex = currentRecordIndex % TOTALENTRIES;
