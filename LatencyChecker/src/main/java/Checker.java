@@ -23,7 +23,6 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.Date;
@@ -38,16 +37,12 @@ public class Checker implements Runnable
 
     private LGMessage message;
     private static final long DROP = -1;
-
-    /** Configure **/
-    public static final int SLEEPINTERVAL = 30000;//30 seconds
-    public static final int EXECUTIONLIMIT = 60; //30 mins total
-    public static final long INITIALSLEEPTIME = 10 * 1000; // 10 seconds
-    /** End - Configure **/
-
     private int executionCount;
+
+
     public static final String REGISTEREDINCACHE = "registered";
     public static final String RENEWEDINCACHE = "renewed";
+
 
     public Checker(LGMessage message)
     {
@@ -61,14 +56,12 @@ public class Checker implements Runnable
 
         try
         {
-            Thread.sleep(INITIALSLEEPTIME);
+            Thread.sleep(10*1000);
         }
         catch(Exception e)
         {
-
+            e.printStackTrace();
         }
-
-
 
         /*POST JSON
         {
@@ -111,7 +104,8 @@ public class Checker implements Runnable
         {
 
             //Send the query
-            String postUrl = LatencyChecker.SLSCACHEENDPOINT ;
+            String postUrl = Constants.SLSCACHEENDPOINT ;
+
             CloseableHttpClient httpClient = HttpClientBuilder.create().build();
             HttpPost post = new HttpPost(postUrl);
             post.setHeader("Content-type", "application/json");
@@ -172,11 +166,6 @@ public class Checker implements Runnable
                                     }
                                     saveData(expiryString, creationTime, LGMessage.REGISTER);
 
-                                    if (message.getIsStored() == true)
-                                    {
-                                        LatencyChecker.storeInfo(recvURI, (String) sourceHashMap.get("expires"));
-                                    }
-
                                     System.out.println("message:" + message.getMessageId() + " Finished" + "--"
                                             + message.getMessageType() + " uri:" + message.getUri());
 
@@ -191,35 +180,28 @@ public class Checker implements Runnable
                                         continue;
                                     }
 
-                                    Date storedExpiryDate = LatencyChecker.uriExpiryMap.get(message.getUri());
-                                    if (storedExpiryDate != null)
+                                    if(message.getExpiresDate().equals(recvExpiryDate))
                                     {
+                                        saveData(expiryString, creationTime, LGMessage.RENEW);
 
-                                        if(storedExpiryDate.before(recvExpiryDate))
-                                        {
-                                            LatencyChecker.uriExpiryMap.put(message.getUri(), message.getExpiresDate());
+                                        System.out.println("message:" + message.getMessageId() + " Finished" + "--"
+                                                + message.getMessageType() + " uri:" + message.getUri());
 
-                                            saveData(expiryString, creationTime, LGMessage.RENEW);
-
-                                            System.out.println("message:" + message.getMessageId() + " Finished" + "--"
-                                                    + message.getMessageType() + " uri:" + message.getUri());
-
-                                            waitFlag = false;
-                                            break;
-                                        }
-                                        else
-                                        {
-                                           // System.out.println(" State:"+ state + " Stored:" + storedExpiryDate + " Received:" + recvExpiryDate +" json:"+ json);
-                                            continue;
-                                        }
+                                        waitFlag = false;
+                                        break;
                                     }
                                     else
                                     {
-                                       // System.out.println("Renew of something without register"+" uri:" + message.getUri());
+                                        continue;
                                     }
+
                                 }
 
                             }
+                        }
+                        else
+                        {
+                            System.err.println("uri:" + message.getUri() + " type:" + message.getMessageType() + " no hits");
                         }
                     }
 
@@ -247,20 +229,16 @@ public class Checker implements Runnable
                 }
                 catch(Exception e)
                 {
-                    e.printStackTrace();
-                }
 
+                }
             }
 
             //Sleep:
             try
             {
-                if(executionCount < EXECUTIONLIMIT && waitFlag)
+                if(executionCount < Constants.POLLTOTAL && waitFlag)
                 {
-                   // System.out.println("message:" + message.getMessageId() + " SLEEP " + "--"
-                     //       + message.getMessageType() + "uri:" + message.getUri());
-
-                    Thread.sleep(SLEEPINTERVAL);
+                    Thread.sleep(Constants.POLLINTERVAL);
                 }
                 else
                 {
@@ -271,7 +249,6 @@ public class Checker implements Runnable
 
                         saveData(null, null, message.getMessageType());
                     }
-
 
                     return;// exit this thread. we are done.
                 }
@@ -296,17 +273,20 @@ public class Checker implements Runnable
         HashMap<String,Object> resultMap = new HashMap<String,Object>();
 
         //M
-        resultMap.put("M",LatencyChecker.M);
+        resultMap.put("M",Constants.M);
         //N
-        resultMap.put("N",LatencyChecker.N);
+        resultMap.put("N",Constants.N);
         //T
-        resultMap.put("T",LatencyChecker.T);
+        resultMap.put("T",Constants.T);
 
         long time = calculateTimeDifference(creationTimeStamp);
-        if(time > EXECUTIONLIMIT* SLEEPINTERVAL)
+        if(time > Constants.POLLINTERVAL* Constants.POLLTOTAL)
         {
             time = DROP;
         }
+
+
+
 
         if(time != DROP)
         {
@@ -344,7 +324,7 @@ public class Checker implements Runnable
         {
 
             CloseableHttpClient httpClient    = HttpClients.createDefault();
-            HttpPost     post          = new HttpPost(LatencyChecker.DATASTOREENDPOINT);
+            HttpPost     post          = new HttpPost(Constants.DATASTOREENDPOINT);
             post.setHeader("Content-type", "application/json");
             StringEntity stringEntity = new StringEntity(json);
             post.setEntity(stringEntity);
@@ -354,11 +334,12 @@ public class Checker implements Runnable
             // get back response.
             if(response.getStatusLine().getStatusCode() == 201)
             {
-                //System.out.println("Response stored!");
+
             }
             else
             {
-                System.err.println("Status response from Data Store: " + response.getStatusLine().getStatusCode());
+                System.err.println("Status response from Data Store: " + response.getStatusLine().getStatusCode()
+                                    + " for storing uri:" + message.getUri());
 
             }
 
@@ -370,7 +351,7 @@ public class Checker implements Runnable
         }
         catch(IOException e)
         {
-            System.out.println("There's an error in the sending the http renew request");
+            System.out.println("There's an error in saving the data in the data store for uri:" + message.getUri());
 
         }
     }
@@ -378,21 +359,21 @@ public class Checker implements Runnable
     /**
      * Calculates the latency
      */
-    public long calculateTimeDifference(Date cacheCreationTimeStamp)
+    public long calculateTimeDifference(Date creationTimeStamp)
     {
         //calculate TimeDifference:
-        if(cacheCreationTimeStamp==null)
+        if(creationTimeStamp==null)
         {
             return DROP;
         }
-        Date coreSuccessTime = message.getTimestamp();
+        Date successTime = message.getTimestamp();
 
 
-        if(cacheCreationTimeStamp.getTime()-coreSuccessTime.getTime() < 0) // impossible
+        if(creationTimeStamp.getTime()-successTime.getTime() < 0)
         {
-            System.out.println("successTime:"+coreSuccessTime.getTime()+" cTime:"+cacheCreationTimeStamp.getTime());
+            System.out.println("successTime:"+successTime.getTime()+" cTime:"+creationTimeStamp.getTime());
         }
-        return  cacheCreationTimeStamp.getTime() - coreSuccessTime.getTime() ;
+        return  creationTimeStamp.getTime() - successTime.getTime() ;
     }
 
 }
