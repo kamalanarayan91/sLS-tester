@@ -1,0 +1,7 @@
+net/es/lookup/logfeed/BaseConfigReader.class
+net/es/lookup/rmqmessages/KVGMessage.class
+net/es/lookup/logfeed/Feeder.class
+net/es/lookup/logfeed/Runner.class
+net/es/lookup/logfeed/Constants.class
+net/es/lookup/logfeed/KeyValueGenerator.class
+net/es/lookup/logfeed/RMQEndPoint.class

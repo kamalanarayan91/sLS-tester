@@ -1,6 +1,8 @@
-/Users/kamala/LatencyChecker/src/main/java/RMQEndPoint.java
-/Users/kamala/LatencyChecker/src/main/java/Checker.java
-/Users/kamala/LatencyChecker/src/main/java/LGMessage.java
-/Users/kamala/LatencyChecker/src/main/java/Record.java
-/Users/kamala/LatencyChecker/src/main/java/LatencyChecker.java
-/Users/kamala/LatencyChecker/src/main/java/CheckerThreadPool.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/RMQEndPoint.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/CheckerThreadPool.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/rmqmessages/LGMessage.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/Checker.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/LatencyChecker.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/BaseConfigReader.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/Record.java
+/Users/kamala/IdeaProjects/LatencyChecker/src/main/java/net/es/lookup/latencycheck/Constants.java
