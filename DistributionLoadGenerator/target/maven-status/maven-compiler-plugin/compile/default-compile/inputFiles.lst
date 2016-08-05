@@ -1,7 +1,6 @@
 /Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/distribution/DistributionLoadGenerator.java
 /Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/distribution/RequestSenderThread.java
 /Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/distribution/Constants.java
-/Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/rmqmessages/LGMessage.java
 /Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/distribution/Record.java
 /Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/distribution/RMQEndPoint.java
 /Users/kamala/IdeaProjects/DistributionLoadGenerator/src/main/java/net/es/lookup/distribution/BaseConfigReader.java

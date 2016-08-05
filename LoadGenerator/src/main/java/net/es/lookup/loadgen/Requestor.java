@@ -69,7 +69,7 @@ public class Requestor implements Runnable
 
             String data = gson.toJson(msgDataMap,HashMap.class);
             String result = null;
-            System.out.println("id:" + message.getMessageId() + " url:" + url + "  data:" + data + " len:" + data.length());
+
 
             try {
                 //Connect

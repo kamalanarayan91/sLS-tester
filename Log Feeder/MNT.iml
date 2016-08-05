@@ -50,5 +50,6 @@
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-api:2.6.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-core:2.6.1" level="project" />
     <orderEntry type="library" name="Maven: org.jyaml:jyaml:1.3" level="project" />
+    <orderEntry type="library" name="Maven: net.es.lookup:loadgen-latencycheck-common:1.0-SNAPSHOT" level="project" />
   </component>
 </module>

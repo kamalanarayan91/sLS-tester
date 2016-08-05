@@ -82,6 +82,7 @@
       <dependency>
           <groupId>net.es.lookup</groupId>
           <artifactId>loadgen-latencycheck-common</artifactId>
+          <version>1.0-SNAPSHOT</version>
       </dependency>
 
   </dependencies>

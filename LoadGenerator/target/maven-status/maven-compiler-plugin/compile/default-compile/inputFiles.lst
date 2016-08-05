@@ -2,9 +2,7 @@
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/Record.java
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/RMQEndPoint.java
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/MessageSender.java
-/Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/rmqmessages/LGMessage.java
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/RequestorThreadPool.java
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/LoadGenerator.java
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/BaseConfigReader.java
 /Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/loadgen/Requestor.java
-/Users/kamala/IdeaProjects/LoadGenerator/src/main/java/net/es/lookup/rmqmessages/KVGMessage.java

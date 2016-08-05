@@ -1,6 +1,5 @@
 net/es/lookup/distribution/DistributionLoadGenerator.class
 net/es/lookup/distribution/BaseConfigReader.class
-net/es/lookup/rmqmessages/LGMessage.class
 net/es/lookup/distribution/RMQEndPoint.class
 net/es/lookup/distribution/RequestSenderThread.class
 net/es/lookup/distribution/Constants.class
