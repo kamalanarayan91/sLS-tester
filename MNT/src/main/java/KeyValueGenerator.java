@@ -19,7 +19,7 @@ import java.util.HashMap;
 public class KeyValueGenerator extends RMQEndPoint implements Runnable {
 
 
-    public static final int TOTALENTRIES=10; // for NOW
+    public static final int TOTALENTRIES=1000; // for NOW
     public ArrayList<HashMap<String,String>> dataList;
     public int currentRecordIndex;
     public int currentId;
@@ -53,7 +53,7 @@ public class KeyValueGenerator extends RMQEndPoint implements Runnable {
                 dataMap.put(Integer.toString(mapKey),Double.toString(Math.random()));
             }
 
-            dataMap.put("type","Testing");
+
             dataList.add(dataMap);
 
         }

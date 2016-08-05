@@ -1,5 +1,6 @@
 /**
  * Created by kamala on 6/7/16.
+ * Used to create a channel for rabbitmq for the latency checker queue.
  */
 import com.rabbitmq.client.Channel;
 

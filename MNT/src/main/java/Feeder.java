@@ -9,18 +9,12 @@ import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-
-
-import org.apache.logging.log4j.Logger;
-
-
-
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
-import org.elasticsearch.index.query.QueryBuilder;
+
 import org.elasticsearch.index.query.QueryBuilders;
 
 
@@ -88,7 +82,7 @@ public class Feeder implements Runnable
         try
         {
             esClient = TransportClient.builder().build()
-                    .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName("sowmya-dev-vm.es.net"), 9300));
+                    .addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(Constants.LOGHOSTNAME), 9300));
         }
         catch(UnknownHostException e)
         {
@@ -131,10 +125,7 @@ public class Feeder implements Runnable
                     e.printStackTrace();
                 }
             }
-            else
-            {
-                System.err.println("KVG took more then one second. Revisit design");
-            }
+
 
 
             calendar.setTime(currentTimeStamp);
@@ -175,7 +166,7 @@ public class Feeder implements Runnable
 
             lastExecutionTime = System.currentTimeMillis();
 
-            //2016-06-12T18:16:42
+
 
         }
 

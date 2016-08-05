@@ -1,3 +1,8 @@
+/**
+ * This class receives the data from the log feeder through rabbitmq
+ * and sends the request to the sls Core
+ */
+
 import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,7 +26,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
 
     public static ConcurrentHashMap<Integer,Record> uriMap = new ConcurrentHashMap<Integer, Record>();
     public static AtomicInteger keyIndex = new AtomicInteger(0);
-    public static final int NUMENTRIES = 50000;
+    public static final int HASHMAPSIZELIMIT = 50000;
     public static AtomicInteger currentEntries = new AtomicInteger(0);
 
 
@@ -45,13 +50,13 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
 
         int key = keyIndex.getAndIncrement();
 
-        if(key == NUMENTRIES)
+        if(key == HASHMAPSIZELIMIT)
         {
             keyIndex.set(0);
             key = 0;
         }
 
-        return key % (NUMENTRIES);
+        return key % (HASHMAPSIZELIMIT);
     }
 
 
@@ -66,7 +71,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
 
         int currentNum = currentEntries.get();
 
-        if(currentNum < NUMENTRIES)
+        if(currentNum < HASHMAPSIZELIMIT)
         {
             uriMap.put(key, record);
 
@@ -102,10 +107,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
         Object randomValue = values[generator.nextInt(values.length)];
 
         return (Record) randomValue;
-        /*double key = Math.random() * uriMap.size();
-        Double keyD = new Double(key);
-        int intKey = keyD.intValue();
-        return uriMap.get(intKey);*/
+
     }
 
     /**
@@ -153,7 +155,7 @@ public class LoadGenerator extends RMQEndPoint implements Consumer
 
     public static void main(String[] args)
     {
-
+        Constants.initializeConstants();
         LoadGenerator loadGenerator = new LoadGenerator(SUBSCRIBEQUEUE);
         loadGenerator.startConsumer();
     }

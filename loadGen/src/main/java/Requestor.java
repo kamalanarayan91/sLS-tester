@@ -1,3 +1,7 @@
+/**
+ * This class sends the request to the sls core and sends the
+ * expires field and uri to the latency checker.
+ */
 import java.io.*;
 import java.net.*;
 import java.util.Calendar;
@@ -9,14 +13,14 @@ import com.rabbitmq.client.Channel;
 
 import com.google.gson.Gson;
 import org.apache.commons.lang.SerializationUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
 
 /**
  * Created by kamala on 5/31/16.
@@ -24,13 +28,13 @@ import org.apache.http.impl.client.HttpClients;
 public class Requestor implements Runnable
 {
     private KVGMessage message;
-    public static final String sLSCoreHostName = "http://ps-cache.es.net:8090";
-    public static final String pathName =  "/lookup/records";
+
+
     public static final int VALIDITY = 2;
 
     public Requestor(KVGMessage message)
     {
-       // super(LoadGenerator.PUBLISHQUEUE);
+
         LogManager.getLogManager().reset();
 
         this.message = message;
@@ -55,7 +59,7 @@ public class Requestor implements Runnable
             HashMap<String,String> msgDataMap =  message.getMap();
 
             HttpURLConnection httpcon=null;
-            String url = sLSCoreHostName+pathName;
+            String url = Constants.SLSCOREENDPOINT + Constants.PATHNAME;
             Gson gson = new Gson();
 
             String data = gson.toJson(msgDataMap,HashMap.class);
@@ -104,7 +108,9 @@ public class Requestor implements Runnable
                 cal.setTime(expiryDate);
                 cal.add(Calendar.HOUR, -1 * VALIDITY);
                 Date successTime = cal.getTime();
-                //
+
+
+
                 //publish to queue for latencyChecker to consume
                 LGMessage lgMessage = new LGMessage();
                 lgMessage.setMessageId(message.getMessageId());
@@ -114,11 +120,9 @@ public class Requestor implements Runnable
                 lgMessage.setExpiresDate(record.getExpiresDate());
                 lgMessage.setIsStored(record.getIsStored());
 
-                //publishMessage(lgMessage);
+
                 publish(lgMessage);
 
-               // System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
-                //                        +" uri:" + map.get("uri") + " stored?: " + record.getIsStored());
 
             }
             catch (UnsupportedEncodingException e)
@@ -154,7 +158,7 @@ public class Requestor implements Runnable
                 // get connections from database
                 // get random db record
                 // send renew record.
-                String       postUrl       = sLSCoreHostName +"/" + uri;// put in your url
+                String       postUrl       = Constants.SLSCOREENDPOINT +"/" + uri;// put in your url
                 Gson         gson          = new Gson();
                  httpClient   = HttpClients.createDefault();
                 HttpPost     post          = new HttpPost(postUrl);
@@ -163,45 +167,40 @@ public class Requestor implements Runnable
                 response = httpClient.execute(post);
 
                 // get back response.
-                boolean success = false;
-                if(response.getStatusLine().getStatusCode() == 200)
+                if (response.getStatusLine().getStatusCode() == 200)
                 {
-                  //  System.out.println("message:"+message.getMessageId() +" FINISHED  -- " + message.getMessageType()
-                  //          +" uri:" + uri  );
-                    success = true;
+
                 }
                 else
                 {
-                    System.err.println("Status response: " + response.getStatusLine().getStatusCode());
-
+                    System.err.println("Status response from core for renew :: " + response.getStatusLine().getStatusCode()
+                            + " uri: "+ record.getUri());
+                    return;
                 }
 
+                String responseJson=  EntityUtils.toString(response.getEntity(), "UTF-8");
+                HashMap<String, String> responseMap = gson.fromJson(responseJson, HashMap.class);
 
-                if(success)
-                {
-                    //calculate created Time:
-                    Date expiryDate = record.getExpiresDate();
-                    Calendar cal = Calendar.getInstance();
-                    cal.setTime(expiryDate);
-                    cal.add(Calendar.HOUR, -1 * VALIDITY);
-                    Date successTime = cal.getTime();
+                Record storedRecord
+                        = LoadGenerator.putInfo(responseMap.get("uri"), responseMap.get("expires"));
 
-                    //send to tier 3
-                    //publish to queue for latencyChecker to consume
-                    LGMessage lgMessage = new LGMessage();
-                    lgMessage.setMessageId(message.getMessageId());
-                    lgMessage.setTimestamp(successTime);
-                    lgMessage.setUri(record.getUri());
-                    lgMessage.setMessageType(LGMessage.RENEW);
-                    lgMessage.setExpiresDate(record.getExpiresDate());
+                //calculate created Time:
+                Date expiryDate = storedRecord.getExpiresDate();
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(expiryDate);
+                cal.add(Calendar.HOUR, -1 * VALIDITY);
+                Date successTime = cal.getTime();
 
-                    //publish
-                    publish(lgMessage);
-                }
-                else
-                {
-                    System.out.println("ERROR!");
-                }
+
+                //send to tier 2
+                //publish to queue for latencyChecker to consume
+                LGMessage lgMessage = new LGMessage();
+                lgMessage.setMessageId(message.getMessageId());
+                lgMessage.setTimestamp(successTime);
+                lgMessage.setUri(storedRecord.getUri());
+                lgMessage.setMessageType(LGMessage.RENEW);
+                lgMessage.setExpiresDate(storedRecord.getExpiresDate());
+
 
 
 
@@ -255,8 +254,6 @@ public class Requestor implements Runnable
         {
             System.err.println("Error in serializing message");
         }
-
-
 
     }
 

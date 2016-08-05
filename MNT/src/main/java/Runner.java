@@ -20,25 +20,7 @@ public class Runner
     public static final int POLLINGPERIOD = 60* 1000; // 1 minute
 
     public static final int LOG = 1;
-    public static final int DIST = 2;
     public static int mode = -1;
-
-
-    /**
-     * Print Usage
-     */
-
-    public static void printUsage()
-    {
-        System.out.println("Usage: java Feeder <RequestGenerationMode> (Distribution)");
-        System.out.println("****Request Generation Mode Options***");
-        System.out.println("1 --- Log based");
-        System.out.println("2 --- Distribution based");
-
-        System.out.println("****Distribution Options***");
-        System.out.println("PO -- Poisson");
-        System.out.println("HT -- Heavy-Tailed");
-    }
 
     /**
      * Get random time within the last 24 hours
@@ -51,8 +33,8 @@ public class Runner
         System.out.println(dateFormat.format(calendar.getTime())); //2014/08/06 16:00:22
 
         //go back 24 hours
-        calendar.add(Calendar.HOUR_OF_DAY,-24*10);
-        //2016-06-11T14:43:35
+        calendar.add(Calendar.HOUR_OF_DAY,-24);
+
 
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         String dateString = "2016-06-14T18:00:00";
@@ -66,6 +48,7 @@ public class Runner
     public static void main(String[] args) throws Exception
     {
         System.out.println("Feeder Starting..");
+        Constants.initializeConstants();
 
         /*Log Feeder*/
         Feeder feeder = new Feeder();
